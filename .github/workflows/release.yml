@@ -1,69 +1,55 @@
-name: Build & Release Tauri App
+# .github/workflows/release.yml
+name: Release – Tauri Desktop App
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-  workflow_dispatch:
+    tags: ['v*']             # run on version tags
+  workflow_dispatch:        # ad-hoc trigger if needed
 
 jobs:
-  build:
-    # matrix across Linux, macOS x64/arm64, Windows
+  build-and-release:
     strategy:
       fail-fast: false
       matrix:
         include:
           - platform: ubuntu-22.04
-            platform-deps: |
+            deps: |
               sudo apt-get update
-              sudo apt-get install -y \
-                libwebkit2gtk-4.1-dev \
-                libappindicator3-dev \
-                librsvg2-dev \
-                patchelf
+              sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
           - platform: macos-latest
-            platform-deps: echo
+            deps: echo
           - platform: macos-latest
-            platform-deps: echo
+            deps: echo
             args: --target aarch64-apple-darwin
           - platform: macos-latest
-            platform-deps: echo
+            deps: echo
             args: --target x86_64-apple-darwin
           - platform: windows-latest
-            platform-deps: echo
+            deps: echo
 
     runs-on: ${{ matrix.platform }}
-    permissions:
-      contents: write
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install Linux native deps
+      - name: Install native deps
         if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          ${{ matrix.platform-deps }}
+        run: ${{ matrix.deps }}
 
-      - name: Setup Node.js & cache
+      - name: Setup Node & cache
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
-      - name: Setup Rust toolchain
+      - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
 
       - name: Install frontend dependencies
         working-directory: apps/desktop
         run: npm ci
 
-      - name: 🧪 Build & Release via Tauri Action
+      - name: Build & Publish via Tauri Action
         uses: tauri-apps/tauri-action@v0
         with:
           projectPath: apps/desktop
