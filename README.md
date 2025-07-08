@@ -1,1 +1,1 @@
-# SyanpStore
+# SynapStore – Project Brain Toolkit
